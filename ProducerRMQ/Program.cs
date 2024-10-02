@@ -1,26 +1,41 @@
 ﻿using System.Text;
 using System.Threading.Channels;
 using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
 
 // connection to the RabbitMQ server 
 var factory = new ConnectionFactory { HostName = "localhost" };
 
 var connection = factory.CreateConnection();
 
-//
-var channel = connection.CreateModel();
-
-// consumer 
-var consumer = new EventingBasicConsumer(channel);
-
-consumer.Received += (m, arge) =>
+// creating channel within the established RabbitMQ connection
+using (var channel = connection.CreateModel())
 {
-    var receivedBody = arge.Body.ToArray();
-    var receivedMsg = Encoding.UTF8.GetString(receivedBody);
-    Console.WriteLine(receivedMsg);
-};
+    // Producer start
+    Console.WriteLine("Producer started...............................................\n");
 
-channel.BasicConsume(queue: "ChatQueue", autoAck: true, consumer: consumer);
+    while (true)
+    {
+        Console.WriteLine("Write your message > ");
+        string pubMsg =  Console.ReadLine();
+        
+        if(pubMsg == "exit")
+        {
+            break;
+        }
 
-Console.ReadLine();
+        // convert it to byte code as RMQ communicate in byte
+        var byteMsg = Encoding.UTF8.GetBytes(pubMsg);
+
+        // now publish this msg 
+        channel.BasicPublish(
+            exchange: "ChatExchange",
+            routingKey: "PubSubKey",
+            basicProperties: null,
+            body: byteMsg
+        );
+
+        Console.WriteLine("Msg published > "+ pubMsg);
+    }
+
+
+}
